@@ -1,0 +1,4 @@
+cp postProcessing/forces/0/force.dat postProcessing/forces/force.dat
+sed -i 's/)//g' postProcessing/forces/force.dat
+sed -i 's/(//g' postProcessing/forces/force.dat
+python phaseAverageForces.py

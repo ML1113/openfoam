@@ -1,0 +1,248 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1906                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs            ("liboverset.so" "libfvMotionSolvers.so");
+
+application     overPimpleDyMFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+//stopAt writeNow;
+
+endTime        10;
+
+deltaT          0.00025;
+
+//writeControl    timeStep;
+//writeInterval   10;
+
+writeControl    adjustableRunTime;
+writeInterval   0.5;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  10;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+adjustTimeStep  yes;
+
+maxCo           1;
+
+functions
+{
+
+    forces
+    {
+       type          forces;
+
+       libs          ("libforces.so");
+
+       writeControl  timeStep;
+       timeInterval  1;
+
+       log           yes;
+
+       patches       ("wallsWing");
+       rho           rhoInf;     // Indicates incompressible
+       log           true;
+       rhoInf        1168; // Redundant for incompressible
+       origin (0 0 0);
+       coordinateRotation
+       {
+               type            axesRotation;
+               e3              (0 0 1);
+               e1              (1 0 0);
+       }
+    }
+    
+    PhaseAverage
+    {
+        libs        ("libutilityFunctionObjects.so");
+
+        type coded;
+        // Name of on-the-fly generated functionObject
+        name writePhaseAveragedU;
+        writeControl  writeTime;
+        
+        executeControl timeStep;
+        
+        codeOptions
+        #{
+            -I$(LIB_SRC)/finiteVolume/lnInclude
+        #};
+
+
+        codeInclude
+        #{
+            #include "volFieldsFwd.H"
+        #};
+        
+        codeData
+        #{
+            scalar startTime_ = 11.0;
+            scalar phasePeriod_ = 4.0;
+            scalar binWidth_ = 0.002;
+            scalarList phasesLocks_ = {0.2,0.64,1.24,1.60,1.80};
+            scalarList count_ = {0.0,0.0,0.0,0.0,0.0};
+            scalarList writeCount_ = {0.0,0.0,0.0,0.0,0.0};
+            PtrList<volVectorField> phaseAverageU_ = PtrList<volVectorField>(phasesLocks_.size());
+            PtrList<volVectorField> phaseAverageVorticity_ = PtrList<volVectorField>(phasesLocks_.size());
+            PtrList<volScalarField> phaseAverageP_ = PtrList<volScalarField>(phasesLocks_.size());
+        #};
+            
+        codeRead
+        #{
+
+            const volVectorField& U = mesh().lookupObject<volVectorField>("U");
+            const volScalarField& p = mesh().lookupObject<volScalarField>("p");
+           
+            // initialize phase locked averaged velocity
+            forAll(phasesLocks_,phase)
+            {
+               
+                phaseAverageU_.set
+                (
+                    phase,
+                     new volVectorField
+                     (
+                         IOobject
+                         (
+                             "U_"+Foam::name(phasesLocks_[phase]),
+                             mesh().time().timeName(),
+                             mesh(),
+                             IOobject::NO_READ,
+                             IOobject::AUTO_WRITE
+                         ),
+                         mesh(),
+                         dimensionedVector("U_"+Foam::name(phasesLocks_[phase]), U.dimensions(), Foam::vector(0,0,0))
+                     )
+                );
+                
+                phaseAverageP_.set
+                (
+                    phase,
+                     new volScalarField
+                     (
+                         IOobject
+                         (
+                             "p_"+Foam::name(phasesLocks_[phase]),
+                             mesh().time().timeName(),
+                             mesh(),
+                             IOobject::NO_READ,
+                             IOobject::AUTO_WRITE
+                         ),
+                         mesh(),
+                         dimensionedScalar("p_"+Foam::name(phasesLocks_[phase]), p.dimensions(), scalar(0.0))
+                     )
+                );
+                
+                volVectorField vorticity = Foam::fvc::curl(U);
+                
+                phaseAverageVorticity_.set
+                (
+                    phase,
+                     new volVectorField
+                     (
+                         IOobject
+                         (
+                             "Vorticity_"+Foam::name(phasesLocks_[phase]),
+                             mesh().time().timeName(),
+                             mesh(),
+                             IOobject::NO_READ,
+                             IOobject::AUTO_WRITE
+                         ),
+                         mesh(),
+                         dimensionedVector("Vorticity_"+Foam::name(phasesLocks_[phase]), vorticity.dimensions() , Foam::vector(0,0,0))
+                     )
+                );
+               
+            }
+        #};
+        
+        codeExecute
+        #{
+            scalar currentTime = mesh().time().value();
+            
+            if (currentTime >  startTime_)
+            {
+                const volVectorField& U = mesh().lookupObject<volVectorField>("U");
+                const volScalarField& p = mesh().lookupObject<volScalarField>("p");
+                scalar numberCycle = max(int((currentTime - startTime_)/phasePeriod_),0);
+                scalar phaseTime = currentTime - startTime_ -  numberCycle*phasePeriod_;
+                
+                Info << "phaseTime = " << phaseTime << endl;
+            
+                forAll(phasesLocks_,phase)
+                {
+                    if ( mag(phaseTime - phasesLocks_[phase]) <= binWidth_)
+                    {
+                        Info << "binWidth_ " << binWidth_ << endl;
+                        Info << "mag(phaseTime - phasesLocks_[phase]) " << mag(phaseTime - phasesLocks_[phase]) << endl;
+                        count_[phase] += 1.0;
+                        // scale by the mean flapping velocity
+                        phaseAverageU_[phase] =  phaseAverageU_[phase] + 1.0 / count_[phase] * U / 0.0974;  
+                        // scale by the dynamic pressure (pressure already is divided by the density)
+                        phaseAverageP_[phase] =  phaseAverageP_[phase] + 1.0 / count_[phase] * p / (0.5 * 0.0974 * 0.0974);  
+                        Info << "phase " << phase << endl;
+                        Info << "writeCount_[phase] = " << writeCount_[phase] << endl;
+                        Info << " = numberCycle = " << numberCycle << endl;
+                        Info << "count_[phase] = " << count_[phase] << endl;
+                        
+                        // write only once per cycle in oder to avoid that the results are visualized with
+                        // the moving mesh
+                        if (writeCount_[phase] <= numberCycle)
+                        {
+                            
+                            // scale by cord length
+                            phaseAverageVorticity_[phase] = Foam::fvc::curl(phaseAverageU_[phase]) * 0.034;
+                            phaseAverageU_[phase].write();
+                            phaseAverageP_[phase].write();
+                            phaseAverageVorticity_[phase].write();
+                            mesh().write();
+                            writeCount_[phase] += 1.0;
+                        }
+                    }
+                    
+                }
+            }
+        #};
+        
+        codeWrite
+        #{
+        /*
+            forAll(phaseAverageU_,phase)
+            {
+                phaseAverageU_[phase].write();
+            }
+        */  
+        #};
+    }
+
+}
+
+// ************************************************************************* //

@@ -1,0 +1,28 @@
+#!/bin/sh
+cd ${0%/*} || exit 1                        # Run from this directory
+. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Tutorial run functions
+
+runApplication blockMesh
+
+runApplication topoSet -dict system/topoSetDictR1
+mv log.topoSet log.topoSet1
+
+runApplication refineMesh -dict system/refineMeshDict1 -overwrite
+mv log.refineMesh log.refineMesh1
+
+runApplication topoSet -dict system/topoSetDictR2
+mv log.topoSet log.topoSet2
+
+runApplication refineMesh -dict system/refineMeshDict2 -overwrite
+mv log.refineMesh log.refineMesh2
+
+
+runApplication snappyHexMesh -overwrite
+
+#runApplication transformPoints -scale '0.0005'
+#mv log.transformPoints log.transformPointsScale
+#runApplication transformPoints -rotate '( (1 0 0) ( 0.766 0.642 0)  )'
+#mv log.transformPoints log.transformPointsRotate
+#runApplication transformPoints -translate '( 0.0 0.0255 0)'
+
+#------------------------------------------------------------------------------

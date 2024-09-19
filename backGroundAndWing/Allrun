@@ -1,0 +1,19 @@
+#!/bin/sh
+cd ${0%/*} || exit 1                        # Run from this directory
+. $WM_PROJECT_DIR/bin/tools/RunFunctions    # Tutorial run functions
+
+./Allrun.pre
+
+# Run it for a bit
+runApplication decomposePar -decomposeParDict system/decomposeParDict.hierarchical
+runParallel $(getApplication) -decomposeParDict system/decomposeParDict.ptscotch 
+runApplication reconstructPar
+# plot phase averaged lift and drag coefficient
+nohup ./phaseAverage > log.phaseAverage
+
+# plot scaled vorticity (scaled with mean flapping velocity and chord length)
+touch m.foam
+nohup python makepngs.py > log.makepngs.py
+
+#------------------------------------------------------------------------------
+
