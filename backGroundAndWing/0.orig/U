@@ -13,20 +13,27 @@ FoamFile
     object      U;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+pressure        0;
+
+turbulentKE     0.24;
+
+turbulentOmega  1.78;
 
 dimensions      [0 1 -1 0 0 0 0];
 
-internalField   uniform (0 0 0);
+internalField   uniform (10 0 0);
 
 boundaryField
 {
     #includeEtc "caseDicts/setConstraintTypes"
-
+    oversetPatch
+    {
+        type            overset;
+    }
     wallsBackGround
     {
-        //type            slip;
-        type            uniformFixedValue;
-        uniformValue    (0 0 0);
+                   
+        type    slip;        
         //type            zeroGradient;
     }
     
@@ -47,11 +54,19 @@ boundaryField
     {
         type slip;
     }
-
-    oversetPatch
+    inlet
     {
-        type            overset;
+        type            fixedValue;
+        value           uniform (10 0 0);
     }
+    
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+        value           uniform (10 0 0);
+    }
+  
 }
 
 // ************************************************************************* //

@@ -20,17 +20,18 @@ internalField   uniform (0 0 0);
 
 boundaryField
 {
+    oversetPatch
+    {
+        patchType       overset;
+        type            zeroGradient;
+    }
+
     ".*"
     {
         type            uniformFixedValue;
         uniformValue    (0 0 0);
     }
 
-    oversetPatch
-    {
-        patchType       overset;
-        type            zeroGradient;
-    }
 
     wallsWing
     {

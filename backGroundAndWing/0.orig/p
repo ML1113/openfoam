@@ -21,7 +21,10 @@ internalField   uniform 0;
 boundaryField
 {
     #includeEtc "caseDicts/setConstraintTypes"
-
+    oversetPatch
+    {
+        type            overset;
+    }
     wallsWing
     {
         type            zeroGradient;
@@ -34,17 +37,23 @@ boundaryField
     
     wallsTop
     {
-        type            fixedValue;
-        value           uniform 0;
+        type zeroGradient;
     }
    frontAndBackBackGround
     {
         type zeroGradient;
     }
-    oversetPatch
+
+     inlet
     {
-        type            overset;
+        type            zeroGradient;
     }
+        outlet
+    {
+        type            fixedValue;
+        value           uniform 0;
+    }
+
 }
 
 // ************************************************************************* //

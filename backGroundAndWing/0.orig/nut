@@ -24,6 +24,16 @@ boundaryField
     {
         type            overset;
     }
+    inlet
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+        outlet
+    {
+        type            calculated;
+        value           uniform 0;
+    }
     wallsBackGround
     {
         type            slip;

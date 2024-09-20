@@ -57,9 +57,6 @@ snGradSchemes
 oversetInterpolation
 {
     method              inverseDistance;
-    searchBox           (-0.15 -0.10 0)(0.15 0.10 0.06);
-    searchBoxDivisions  (100 100 1);
-
 }
 
 fluxRequired

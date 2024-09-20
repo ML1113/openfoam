@@ -60,11 +60,25 @@ boundary
         faces
         (
             (1 5 4 0)
-            (0 4 7 3)
+        );
+    }
+    inlet 
+    {
+    	type inlet;
+    	faces 
+    	(
+    	  (0 4 7 3)
+    	);
+    	
+    }
+    outlet
+    {
+      type patch;
+       faces
+        (
             (2 6 5 1)
         );
     }
-    
     wallsTop
     {
         type wall;

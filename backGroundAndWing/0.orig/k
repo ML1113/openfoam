@@ -24,6 +24,18 @@ boundaryField
     {
         type            overset;
     }
+    inlet
+    {
+        type            fixedValue;
+        value           uniform 0.24;
+    }
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform 0.24;
+        value           uniform 0.24;
+    }
+
     wallsWing
     {
         type            kqRWallFunction;
